@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 
-
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
@@ -14,10 +13,10 @@ fn main() {
 struct Player;
 
 #[derive(Component)]
-struct Immovable;
+struct Velocity(Vec3);
 
 #[derive(Component)]
-struct Velocity(Vec3);
+struct Immovable;
 
 fn setup(mut commands: Commands, mut _meshes: ResMut<Assets<Mesh>>, mut _materials: ResMut<Assets<ColorMaterial>>) {
     commands.spawn(Camera2dBundle::default());
@@ -45,15 +44,6 @@ fn setup(mut commands: Commands, mut _meshes: ResMut<Assets<Mesh>>, mut _materia
     })
     .insert(Immovable);
 
-    commands.spawn(SpriteBundle {
-        transform: Transform::from_translation(Vec3::new(-375.0, 0.0, 10.0)),
-        sprite: Sprite {
-            color: Color::rgb(1.0, 1.0, 1.0),
-            custom_size: Some(Vec2::new(1.0, 1.0)),
-            ..default()
-        },
-        ..default()
-    });
 }
 
 fn player_movement(mut query: Query<(&mut Velocity, &mut Transform), With<Player>>, input: Res<Input<KeyCode>>, time: Res<Time>) {
@@ -83,12 +73,13 @@ fn detect_wall_collisions(mut players: Query<(&Player, &mut Transform, &Sprite, 
         let player_width = player_sprite.custom_size.unwrap().x;
         let player_x = player_transform.translation.x - (player_width / 2.0);
         let player_y = player_transform.translation.y + (player_height / 2.0);
-        let velocity_norm = player_velocity.0.normalize();
 
         let immovable_height = immovable_sprite.custom_size.unwrap().y;
         let immovable_width = immovable_sprite.custom_size.unwrap().x;
         let immovable_x = immovable_transform.translation.x - (immovable_width / 2.0);
         let immovable_y = immovable_transform.translation.y + (immovable_height / 2.0);
+
+        let velocity_norm = player_velocity.0.normalize();
 
         // check for collision between player and immovable (this is simply using AABB collision detection)
         if player_x + player_width > immovable_x && player_x < immovable_x + immovable_width && player_y - player_height < immovable_y && player_y > immovable_y - immovable_height {
@@ -112,9 +103,6 @@ fn detect_wall_collisions(mut players: Query<(&Player, &mut Transform, &Sprite, 
                 player_transform.translation.y = immovable_y - immovable_height - (player_height / 2.0);
                 player_velocity.0.y = 0.0;
             }
-
         }
-
-
     }
 }
