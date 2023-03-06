@@ -43,11 +43,10 @@ fn setup(mut commands: Commands, mut _meshes: ResMut<Assets<Mesh>>, mut _materia
         ..default()
     })
     .insert(Immovable);
-
 }
 
-fn player_movement(mut query: Query<(&mut Velocity, &mut Transform), With<Player>>, input: Res<Input<KeyCode>>, time: Res<Time>) {
-    let (mut velocity, mut transform) = query.single_mut();
+fn player_movement(mut query: Query<(&Player, &mut Transform, &Sprite, &mut Velocity), Without<Immovable>>, input: Res<Input<KeyCode>>, time: Res<Time>) {
+    let (_, mut transform, _, mut velocity) = query.single_mut();
 
     if input.pressed(KeyCode::W) {velocity.0.y += 1.0}
     if input.pressed(KeyCode::S) {velocity.0.y -= 1.0}
@@ -71,8 +70,8 @@ fn detect_wall_collisions(mut players: Query<(&Player, &mut Transform, &Sprite, 
 
         let player_height = player_sprite.custom_size.unwrap().y;
         let player_width = player_sprite.custom_size.unwrap().x;
-        let player_x = player_transform.translation.x - (player_width / 2.0);
-        let player_y = player_transform.translation.y + (player_height / 2.0);
+        let player_x = &player_transform.translation.x - (player_width / 2.0);
+        let player_y = &player_transform.translation.y + (player_height / 2.0);
 
         let immovable_height = immovable_sprite.custom_size.unwrap().y;
         let immovable_width = immovable_sprite.custom_size.unwrap().x;
@@ -83,26 +82,59 @@ fn detect_wall_collisions(mut players: Query<(&Player, &mut Transform, &Sprite, 
 
         // check for collision between player and immovable (this is simply using AABB collision detection)
         if player_x + player_width > immovable_x && player_x < immovable_x + immovable_width && player_y - player_height < immovable_y && player_y > immovable_y - immovable_height {
-            // player moving right to wall
-            if velocity_norm.x > 0.0 && velocity_norm.y == 0.0 {
-                player_transform.translation.x = immovable_x - immovable_width + (player_width / 2.0);
-                player_velocity.0.x = 0.0;
-            }
-            // player moving left to wall
-            if velocity_norm.x < 0.0 && velocity_norm.y == 0.0 {
-                player_transform.translation.x = immovable_x + immovable_width + (player_width / 2.0);
-                player_velocity.0.x = 0.0;
-            }
-            // player moving down to wall
+
+        // ORTHOGONAL CHECKS
+            // player moving down
             if velocity_norm.y < 0.0 && velocity_norm.x == 0.0 {
                 player_transform.translation.y = immovable_y + (player_height / 2.0);
                 player_velocity.0.y = 0.0;
+                break;
             }
-            // player moving up to wall
+            // player moving up
             if velocity_norm.y > 0.0 && velocity_norm.x == 0.0 {
                 player_transform.translation.y = immovable_y - immovable_height - (player_height / 2.0);
                 player_velocity.0.y = 0.0;
+                break;
             }
+            // player moving right
+            if velocity_norm.x > 0.0 && velocity_norm.y == 0.0 {
+                player_transform.translation.x = immovable_x - immovable_width + (player_width / 2.0);
+                player_velocity.0.x = 0.0;
+                break;
+            }
+            // player moving left
+            if velocity_norm.x < 0.0 && velocity_norm.y == 0.0 {
+                player_transform.translation.x = immovable_x + immovable_width + (player_width / 2.0);
+                player_velocity.0.x = 0.0;
+                break;
+            }
+        // DIAGONAL COLLISIONS
+            // player moving right
+            if velocity_norm.x > 0.0 && player_x < immovable_x {
+                player_transform.translation.x = immovable_x - immovable_width + (player_width / 2.0);
+                player_velocity.0.x = 0.0;
+                break;
+            }
+            // player moving left
+            if velocity_norm.x < 0.0 && player_x + player_width > immovable_x + immovable_width {
+                player_transform.translation.x = immovable_x + immovable_width + (player_width / 2.0);
+                player_velocity.0.x = 0.0;
+                break;
+            }
+            // player moving down
+            if velocity_norm.y < 0.0 && player_y > immovable_y {
+                player_transform.translation.y = immovable_y + (player_height / 2.0);
+                player_velocity.0.y = 0.0;
+                break;
+            }
+            // player moving up
+            if velocity_norm.y > 0.0 && player_y - player_height < immovable_y - immovable_height {
+                player_transform.translation.y = immovable_y - immovable_height - (player_height / 2.0);
+                player_velocity.0.y = 0.0;
+                break;
+            }
+
+
         }
     }
 }
